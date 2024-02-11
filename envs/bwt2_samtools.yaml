@@ -1,0 +1,8 @@
+
+name: bwt2_samtools
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bowtie2==2.5.3
+  - samtools

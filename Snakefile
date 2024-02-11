@@ -1,96 +1,144 @@
 import os
 import pandas as pd
+from glob import glob
 from collections import Counter
+import shutil
 DIRECTION=["1","2"]
 GROUPS=set()
-SAMPLES=pd.read_csv("samples.tsv", sep="\t",dtype=object)
+sample_df=pd.read_csv("samples.tsv", sep="\t",dtype=object)
 
-genome = '/mnt/d/2023/EPICS/EPIC_ITD_781_PRS/ITD_1030_PRS_Panel_quality/02_analyses/00_ref/human_g1k_v37_decoy.fasta'
+SAMPLES =sample_df['ID']
+genome = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla.mmi'
 
+bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
 
 def check_symlink(file1, file2):
     try:
-        os.symlink(file1, file2)
+        shutil.copytree(file1,file2)
+        #os.symlink(file1, file2)
     except FileExistsError:
         print("Link for " + file1 + " is already present in 01_raw")
 
 
 
 
-for s,d in zip(SAMPLES['folder'],SAMPLES['ID']):
+
+for s,d in zip(sample_df['folder'],sample_df['ID']):
     os.makedirs("../01_data/",exist_ok=True)
     check_symlink(s,f'../01_data/{d}')
  #   os.makedirs("../02_trimmed/" + b +"/fastqc", exist_ok=True)
  #   os.makedirs("../03_mapped/"+b, exist_ok=True)
 
 
+
+
+
+
+
+ab1_folder, ab1_file = glob_wildcards("../01_data/{tumor}/{sample}.ab1")
+
+
+
+fasta_folder, fasta_file = glob_wildcards("../01_data/{tumor}/{sample}.fasta")
+
+
+
+
+ab1_p = [f'{x}/{xx}' for x,xx in zip(ab1_folder,ab1_file)]
+
+
+fasta_p = [f'{x}/{xx}' for x,xx in zip(fasta_folder,fasta_file)]
+
+
+
 rule all:
     input:
-#        expand('../01_raw/{sample}/fastqc/{sample}_{direction}P_fastqc.html',direction=DIRECTION, sample=SAMPLES),
- #       expand("../03_mapped/{sample}/{sample}.mkdup.bam", sample=SAMPLES),
+        expand('../02_fasta/{sample}.fasta',sample=ab1_p),
+        '../03_merge_fasta/primer.fasta',
+        '../03_merge_fasta/ab1.fasta',
+        '../04_mapped/primer.bam',
+        '../04_mapped/ab1.bam',
+        expand('../05_result/{sample}/{sample}.bam',sample=SAMPLES),
+        expand('../05_result/{sample}/{sample}.bam',sample=SAMPLES)
+        
+        
 
-rule fastqc1:
+
+
+rule ab1_to_fasta:
     input:
-        r = '../01_raw/{sample}/{sample}_{direction}P.fastq.gz',
+        ab1_f = '../01_data/{sample}.ab1'
     threads: 2
     priority: 50
     output:
-        '../01_raw/{sample}/fastqc/{sample}_{direction}P_fastqc.html'
+        fasta_f = '../02_fasta/{sample}.fasta'
+        
     conda:
-        "envs/fastqc.yaml"
+        "envs/bio.yaml"
     shell:
-        'fastqc -o ../01_raw/{wildcards.sample}/fastqc -t {threads} --extract {input.r}'
+        'python bin/abi2fasta.py {input.ab1_f} {output.fasta_f}'
 
-rule trimming:
+rule create_fasta1:
     input:
-        r1= '../01_raw/{sample}/{sample}_1P.fastq.gz',
-        r2= '../01_raw/{sample}/{sample}_2P.fastq.gz',
-    output:
-        p1="../02_trimmed/{sample}/{sample}_trimmed_1P.fastq.gz",
-        u1="../02_trimmed/{sample}/{sample}_trimmed_1U.fastq.gz",
-        p2="../02_trimmed/{sample}/{sample}_trimmed_2P.fastq.gz",
-        u2="../02_trimmed/{sample}/{sample}_trimmed_2U.fastq.gz",
-    conda:
-        "envs/trimmomatic.yaml"
-    threads: 4
-    priority: 50
-    shell:
-        'trimmomatic PE -threads {threads} \
-        {input.r1} {input.r2} \
-        {output.p1} {output.u1} \
-        {output.p2} {output.u2} \
-        ILLUMINACLIP:data/TruSeq3-PE.fa:2:30:10:2:true \
-        LEADING:10 TRAILING:10 SLIDINGWINDOW:4:15 MINLEN:36'
+        fasta_f = expand('../02_fasta/{sample}.fasta',sample=ab1_p)
 
-rule Minimap2:
-    input:
-        r1 = "../02_trimmed/{sample}/{sample}_trimmed_1P.fastq.gz",
-        r2 = "../02_trimmed/{sample}/{sample}_trimmed_2P.fastq.gz",
-        #r1= '../01_raw/{sample}/{sample}_1P.fastq.gz',
-        #r2= '../01_raw/{sample}/{sample}_2P.fastq.gz',
-        #sampleID="{sample}",
-    output:
-        ancient("../03_mapped/{sample}/{sample}Aligned.sortedByCoord.out.bam"),
-    conda:
-        "envs/minimap.yaml"
-    threads: 8
-    priority: 50
-    shell:
-        "minimap2 -ax sr -t {threads} {genome} {input.r1} {input.r2} |\
-        samtools view -b | samtools sort -o ../03_mapped/{wildcards.sample}/{wildcards.sample}Aligned.sortedByCoord.out.bam"
-
-
-rule MarkDuplicates:
-    input:
-        bamOrig = ancient("../03_mapped/{sample}/{sample}Aligned.sortedByCoord.out.bam")
 
     output:
-        bamMkdup=  ancient("../03_mapped/{sample}/{sample}.mkdup.bam")
-
-    threads: 2
-
-    conda:
-        "envs/samtools.yaml"
+        allfasta = '../03_merge_fasta/ab1.fasta'
 
     shell:
-        "samtools collate -o /dev/stdout {input.bamOrig} | samtools fixmate -m /dev/stdin /dev/stdout | samtools sort | samtools markdup /dev/stdin {output.bamMkdup}; samtools index {output.bamMkdup}"
+        'cat {input.fasta_f}  >>{output.allfasta}'
+
+
+rule create_fasta2:
+    input:
+        fasta_primer = expand('../01_data/{sample}.fasta',sample=fasta_p)
+
+
+    output:
+        allfasta = '../03_merge_fasta/primer.fasta'
+
+    shell:
+        'cat {input.fasta_primer} >>{output.allfasta}'
+
+
+
+rule bwt2_map:
+    input:
+        allfasta = '../03_merge_fasta/primer.fasta'
+    conda:
+        "envs/bwt2_samtools.yaml"
+    output:
+        sam = '../04_mapped/primer.sam',
+        bam = '../04_mapped/primer.bam',
+
+    shell:
+        'bowtie2 -L 4 --gbar 1 -R 10 -D 50 -f -x {bwt2_index} -U  {input.allfasta} -S {output.sam}; \
+        samtools view -b  {output.sam} | samtools sort /dev/stdin >  {output.bam};samtools index {output.bam}' 
+
+rule minimap2_map:
+    input:
+        allfasta = '../03_merge_fasta/ab1.fasta'
+    conda:
+        "envs/minimap2_samtools.yaml"
+    output:
+        bam = '../04_mapped/ab1.bam',
+        sam = '../04_mapped/ab1.sam',
+    shell:
+        'minimap2 -ax splice -a {genome} {input.allfasta} > {output.sam} ;\
+            samtools sort -O BAM {output.sam}  >  {output.bam} ; samtools index {output.bam}' 
+        
+        
+        
+
+rule split_bam:
+    input:
+        primer_bam = '../04_mapped/primer.bam',
+        ab1_bam = '../04_mapped/ab1.bam',
+    output:
+        result_bam = '../05_result/{sample}/{sample}.bam'
+    conda:
+        "envs/bio_pysam.yaml"
+    shell:
+        'python bin/split_bam.py {input.primer_bam} {input.ab1_bam} {output.result_bam} ../01_data/{wildcards.sample}/ \
+            ../02_fasta/{wildcards.sample}/'
