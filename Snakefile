@@ -8,10 +8,10 @@ GROUPS=set()
 sample_df=pd.read_csv("samples.tsv", sep="\t",dtype=object)
 
 SAMPLES =sample_df['ID']
-genome = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla.mmi'
-
-bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
-
+#genome = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla.mmi'
+genome = '/mnt/d/ref_data/minimap2_mmi/GRCh38_latest_genomic.mmi'
+#bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
+bwt2_index =  '/mnt/d/ref_data/bwt2_index/GRCh38_latest_genomic'
 def check_symlink(file1, file2):
     try:
         shutil.copytree(file1,file2)
@@ -59,7 +59,7 @@ rule all:
         '../04_mapped/primer.bam',
         '../04_mapped/ab1.bam',
         expand('../05_result/{sample}/{sample}.bam',sample=SAMPLES),
-        expand('../05_result/{sample}/{sample}.bam',sample=SAMPLES)
+        expand('../05_result/{sample}/{sample}.sorted.bam',sample=SAMPLES)
         
         
 
@@ -136,9 +136,11 @@ rule split_bam:
         primer_bam = '../04_mapped/primer.bam',
         ab1_bam = '../04_mapped/ab1.bam',
     output:
-        result_bam = '../05_result/{sample}/{sample}.bam'
+        result_bam = '../05_result/{sample}/{sample}.bam',
+        result_bam_sorted = '../05_result/{sample}/{sample}.sorted.bam',
+
     conda:
         "envs/bio_pysam.yaml"
     shell:
         'python bin/split_bam.py {input.primer_bam} {input.ab1_bam} {output.result_bam} ../01_data/{wildcards.sample}/ \
-            ../02_fasta/{wildcards.sample}/'
+            ../02_fasta/{wildcards.sample}/ ;  samtools sort -O BAM {output.result_bam}  > {output.result_bam_sorted}; samtools index {output.result_bam_sorted}'

@@ -6,3 +6,4 @@ channels:
 dependencies:
   - biopython
   - pysam
+  - samtools
