@@ -8,10 +8,16 @@ GROUPS=set()
 sample_df=pd.read_csv("samples.tsv", sep="\t",dtype=object)
 
 SAMPLES =sample_df['ID']
+GENES = sample_df['GENE']
+
+
+gene_d = dict(zip(SAMPLES,GENES))
 #genome = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla.mmi'
-genome = '/mnt/d/ref_data/minimap2_mmi/GRCh38_latest_genomic.mmi'
+genome = '/mnt/d/ref_data/dragen/minimap_mmi/hg38.mmi'
 #bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
-bwt2_index =  '/mnt/d/ref_data/bwt2_index/GRCh38_latest_genomic'
+bwt2_index =  '//mnt/d/ref_data/dragen/bwt2/hg38'
+
+gff = '/mnt/d/2023/ITD/ITD_2317_codeclub_gffutils/Code_Club/26_gffutils/GCF_000001405.40_GRCh38.p14_genomic.gff.db'
 def check_symlink(file1, file2):
     try:
         shutil.copytree(file1,file2)
@@ -59,7 +65,9 @@ rule all:
         '../04_mapped/primer.bam',
         '../04_mapped/ab1.bam',
         expand('../05_result/{sample}/{sample}.bam',sample=SAMPLES),
-        expand('../05_result/{sample}/{sample}.sorted.bam',sample=SAMPLES)
+        expand('../05_result/{sample}/{sample}.sorted.bam',sample=SAMPLES),
+        expand('../05_result/{sample}/{sample}.bed',zip,sample=SAMPLES,gene=GENES)
+
         
         
 
@@ -144,3 +152,16 @@ rule split_bam:
     shell:
         'python bin/split_bam.py {input.primer_bam} {input.ab1_bam} {output.result_bam} ../01_data/{wildcards.sample}/ \
             ../02_fasta/{wildcards.sample}/ ;  samtools sort -O BAM {output.result_bam}  > {output.result_bam_sorted}; samtools index {output.result_bam_sorted}'
+
+
+rule bed_file:
+    input:
+        result_bam_sorted = '../05_result/{sample}/{sample}.sorted.bam',
+    output:
+        result_bed = '../05_result/{sample}/{sample}.bed'
+    conda:
+        "envs/pysam_gffutils.yaml"
+    shell:
+        'python bin/write_bed.py {input.result_bam_sorted} {output.result_bed} {gff}'
+
+

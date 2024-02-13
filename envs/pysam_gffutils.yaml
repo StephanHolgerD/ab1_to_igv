@@ -1,0 +1,9 @@
+
+name: gffutils_pysam
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - gffutils
+  - pysam
+  - samtools
