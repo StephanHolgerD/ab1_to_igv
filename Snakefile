@@ -8,10 +8,10 @@ GROUPS=set()
 sample_df=pd.read_csv("samples.tsv", sep="\t",dtype=object)
 
 SAMPLES =sample_df['ID']
-GENES = sample_df['GENE']
+#GENES = sample_df['GENE']
 
 
-gene_d = dict(zip(SAMPLES,GENES))
+#gene_d = dict(zip(SAMPLES,GENES))
 #genome = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla.mmi'
 genome = '/mnt/d/ref_data/dragen/minimap_mmi/hg38.mmi'
 #bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
@@ -66,7 +66,10 @@ rule all:
         '../04_mapped/ab1.bam',
         expand('../05_result/{sample}/{sample}.bam',sample=SAMPLES),
         expand('../05_result/{sample}/{sample}.sorted.bam',sample=SAMPLES),
-        expand('../05_result/{sample}/{sample}.bed',zip,sample=SAMPLES,gene=GENES)
+        expand('../05_result/{sample}/{sample}.primer.sorted.bam',sample=SAMPLES),
+
+        expand('../05_result/{sample}/{sample}.bed',zip,sample=SAMPLES)
+#        expand('../05_result/{sample}/{sample}.bed',zip,sample=SAMPLES,gene=GENES)
 
         
         
@@ -146,12 +149,17 @@ rule split_bam:
     output:
         result_bam = '../05_result/{sample}/{sample}.bam',
         result_bam_sorted = '../05_result/{sample}/{sample}.sorted.bam',
+        result_primer = '../05_result/{sample}/{sample}.primer.bam',
+        result_primer_sorted = '../05_result/{sample}/{sample}.primer.sorted.bam'
+
 
     conda:
         "envs/bio_pysam.yaml"
     shell:
-        'python bin/split_bam.py {input.primer_bam} {input.ab1_bam} {output.result_bam} ../01_data/{wildcards.sample}/ \
-            ../02_fasta/{wildcards.sample}/ ;  samtools sort -O BAM {output.result_bam}  > {output.result_bam_sorted}; samtools index {output.result_bam_sorted}'
+        'python bin/split_bam.py {input.primer_bam} {input.ab1_bam} {output.result_bam} {output.result_primer} ../01_data/{wildcards.sample}/ \
+            ../02_fasta/{wildcards.sample}/ ;\
+              samtools sort -O BAM {output.result_bam}  > {output.result_bam_sorted}; samtools index {output.result_bam_sorted};\
+              samtools sort -O BAM {output.result_primer}  > {output.result_primer_sorted}; samtools index {output.result_primer_sorted}'
 
 
 rule bed_file:

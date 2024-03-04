@@ -12,7 +12,7 @@ out_f = sys.argv[2]
 
 
 record = SeqIO.read(in_f, "abi")
-    
+record.id = in_f.split('/')[-1].replace('.ab1','').replace('abi','')
     
 with open(out_f,'w')as o:
     SeqIO.write(record,o,'fasta')
