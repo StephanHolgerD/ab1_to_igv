@@ -4,11 +4,15 @@ import sys
 
 
 
-bam_in = sys.argv[1]
+bam_in = sys.argv[3:]
+#bam_in = sys.argv[1]
 
-bed_out = sys.argv[2]
 
-gffutils_db = sys.argv[3]
+bed_out = sys.argv[1]
+
+gffutils_db = sys.argv[2]
+
+
 
 #gffutils_db = '/mnt/d/2023/ITD/ITD_2317_codeclub_gffutils/Code_Club/26_gffutils/GCF_000001405.40_GRCh38.p14_genomic.gff.db'
 
@@ -35,10 +39,12 @@ for r in db.seqids():
         
 
 
-ROI = set()        
-with pysam.AlignmentFile(bam_in) as bam:
-    for r in bam:
-        ROI.add((r.reference_name,r.reference_start,r.reference_end))
+ROI = set()
+
+for bam_file in bam_in:
+    with pysam.AlignmentFile(bam_file) as bam:
+        for r in bam:
+            ROI.add((r.reference_name,r.reference_start,r.reference_end))
 
 padding = 2000
 

@@ -16,6 +16,7 @@ SAMPLES =sample_df['ID']
 genome = '/mnt/d/ref_data/dragen/minimap_mmi/hg38.mmi'
 #bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
 bwt2_index =  '//mnt/d/ref_data/dragen/bwt2/hg38'
+anno_bed = '/mnt/d/2023/ITD/ITD_2428_sanger_SoN/GCF_000001405.40_GRCh38.p14_genomic.gff.bed'
 
 gff = '/mnt/d/2023/ITD/ITD_2317_codeclub_gffutils/Code_Club/26_gffutils/GCF_000001405.40_GRCh38.p14_genomic.gff.db'
 def check_symlink(file1, file2):
@@ -136,7 +137,7 @@ rule minimap2_map:
         bam = '../04_mapped/ab1.bam',
         sam = '../04_mapped/ab1.sam',
     shell:
-        'minimap2 -ax splice -a {genome} {input.allfasta} > {output.sam} ;\
+        'minimap2 -ax splice --junc-bed {anno_bed} -a {genome} {input.allfasta} > {output.sam} ;\
             samtools sort -O BAM {output.sam}  >  {output.bam} ; samtools index {output.bam}' 
         
         
@@ -165,11 +166,14 @@ rule split_bam:
 rule bed_file:
     input:
         result_bam_sorted = '../05_result/{sample}/{sample}.sorted.bam',
+        result_primer_sorted = '../05_result/{sample}/{sample}.primer.sorted.bam'
+
+
     output:
         result_bed = '../05_result/{sample}/{sample}.bed'
     conda:
         "envs/pysam_gffutils.yaml"
     shell:
-        'python bin/write_bed.py {input.result_bam_sorted} {output.result_bed} {gff}'
+        'python bin/write_bed.py  {output.result_bed} {gff} {input.result_bam_sorted} {input.result_primer_sorted}'
 
 
