@@ -16,9 +16,9 @@ SAMPLES =sample_df['ID']
 genome = '/mnt/d/ref_data/dragen/minimap_mmi/hg38.mmi'
 #bwt2_index = '/home/stephano/Documents/02_gitHubProjects/00_testData/GRCh38_full_analysis_set_plus_decoy_hla_btw2/GRCh38_full_analysis_set_plus_decoy_hla'
 bwt2_index =  '//mnt/d/ref_data/dragen/bwt2/hg38'
-anno_bed = '/mnt/d/2023/ITD/ITD_2428_sanger_SoN/GCF_000001405.40_GRCh38.p14_genomic.gff.bed'
+anno_bed = '/mnt/d/2024_2025/ITD/ITD_2428_sanger_SoN/GCF_000001405.40_GRCh38.p14_genomic.gff.bed'
 
-gff = '/mnt/d/2023/ITD/ITD_2317_codeclub_gffutils/Code_Club/26_gffutils/GCF_000001405.40_GRCh38.p14_genomic.gff.db'
+gff = '/mnt/d/ref_data/hg38/gff_data/GCF_000001405.40_GRCh38.p14_genomic.gff.db'
 def check_symlink(file1, file2):
     try:
         shutil.copytree(file1,file2)
